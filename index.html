@@ -1,0 +1,137 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>AURAX-2026 | 10 Decades, 1 Aura</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --accent: #6366f1;
+      --bg: #030303;
+      --aura-glow: rgba(99, 102, 241, 0.08);
+    }
+    html, body, #root {
+      width: 100%;
+      max-width: 100%;
+      min-height: 100%;
+    }
+    *, *::before, *::after {
+      box-sizing: border-box;
+    }
+    img, video, svg, canvas {
+      max-width: 100%;
+      height: auto;
+    }
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: var(--bg);
+      color: #ffffff;
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+      text-size-adjust: 100%;
+      -webkit-text-size-adjust: 100%;
+    }
+    .mesh-bg {
+      position: fixed;
+      inset: 0;
+      z-index: -2;
+      background: 
+        radial-gradient(at 0% 0%, hsla(253,16%,7%,1) 0, transparent 50%), 
+        radial-gradient(at 50% 50%, var(--aura-glow) 0, transparent 70%),
+        radial-gradient(at 100% 100%, hsla(225,39%,10%,0.3) 0, transparent 50%);
+    }
+    .noise {
+      position: fixed;
+      inset: 0;
+      z-index: -1;
+      opacity: 0.04;
+      pointer-events: none;
+      background-image: url('/noise.svg');
+    }
+    .glass-premium {
+      background: rgba(255, 255, 255, 0.015);
+      backdrop-filter: blur(24px) saturate(180%);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+    }
+    .mono {
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .animate-reveal {
+      animation: reveal 1.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      opacity: 0;
+      transform: translateY(30px);
+    }
+    .aura-text-glow {
+      text-shadow: 0 0 40px rgba(99, 102, 241, 0.3);
+    }
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    @keyframes reveal {
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes aura-pulse {
+      0%, 100% { opacity: 0.5; transform: scale(1); }
+      50% { opacity: 0.8; transform: scale(1.05); }
+    }
+    .aura-pulse-element {
+      animation: aura-pulse 8s ease-in-out infinite;
+    }
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #1a1a1a; border-radius: 10px; }
+    ::-webkit-scrollbar-thumb:hover { background: #222; }
+
+    @supports (height: 100dvh) {
+      .min-h-screen {
+        min-height: 100dvh;
+      }
+    }
+
+    @media print {
+      .no-print { display: none !important; }
+      body { background: white !important; color: black !important; }
+      .glass-premium { border: 1px solid #eee !important; background: none !important; }
+      .mesh-bg, .noise { display: none; }
+      .print-only { display: block !important; }
+    }
+    
+    @media (min-width: 420px) {
+      .xs\:block { display: block !important; }
+      .xs\:h-\[550px\] { height: 550px !important; }
+      .xs\:w-32 { width: 8rem !important; }
+      .xs\:h-32 { height: 8rem !important; }
+      .xs\:grid-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+      .xs\:text-sm { font-size: 0.875rem !important; line-height: 1.25rem !important; }
+      .xs\:text-2xl { font-size: 1.5rem !important; line-height: 2rem !important; }
+      .xs\:text-3xl { font-size: 1.875rem !important; line-height: 2.25rem !important; }
+    }
+
+    @media (max-width: 640px) {
+      input, select, textarea {
+        font-size: 16px !important;
+      }
+    }
+
+    @media (max-width: 380px) {
+      .mobile-tight {
+        letter-spacing: 0.04em !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="mesh-bg aura-pulse-element"></div>
+  <div class="noise"></div>
+  <div id="root"></div>
+<script type="module" src="/index.tsx"></script>
+</body>
+</html>

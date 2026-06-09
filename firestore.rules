@@ -1,0 +1,193 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Max team size currently used in app data (Cricket: 15).
+    // Keeping this aligned also keeps rule-time existsAfter/getAfter checks within limits.
+    function maxMemberCount() {
+      return 15;
+    }
+
+    function isAdmin() {
+      return request.auth != null
+        && request.auth.token.admin == true
+        && request.auth.token.email_verified == true
+        && adminSessionValid();
+    }
+
+    function adminSessionValid() {
+      return request.auth != null
+        && (
+          !exists(
+            /databases/$(database)/documents/admin_session_controls/$(request.auth.uid)
+          )
+          || !(
+            get(
+              /databases/$(database)/documents/admin_session_controls/$(request.auth.uid)
+            ).data.revokeBefore is int
+          )
+          || request.auth.token.auth_time >= get(
+            /databases/$(database)/documents/admin_session_controls/$(request.auth.uid)
+          ).data.revokeBefore
+        );
+    }
+
+    function isNonEmptyString(value) {
+      return value is string && value.size() > 0;
+    }
+
+    function isValidRollNumber(value) {
+      return value is string && value.matches('^[0-9]{12}$');
+    }
+
+    function hasValidMembersAndRolls(members, memberRolls) {
+      return members is list
+        && members.size() > 0
+        && members.size() <= maxMemberCount()
+        && memberRolls is list
+        && memberRolls.size() > 0
+        && memberRolls.size() <= maxMemberCount()
+        && memberRolls.size() == members.size();
+    }
+
+    function primaryRollLockExistsAfter(eventId, memberRolls) {
+      return memberRolls is list
+        && memberRolls.size() > 0
+        && existsAfter(
+          /databases/$(database)/documents/registration_roll_locks/$(getLockDocId(
+            eventId,
+            memberRolls[0]
+          ))
+        );
+    }
+
+    function registrationDocPath(registrationId) {
+      return /databases/$(database)/documents/registrations/$(registrationId);
+    }
+
+    function lockMatchesRegistrationWrite(lockData) {
+      return existsAfter(registrationDocPath(lockData.registrationId))
+        && getAfter(registrationDocPath(lockData.registrationId)).data.eventId == lockData.eventId
+        && getAfter(registrationDocPath(lockData.registrationId)).data.memberRolls is list
+        && getAfter(registrationDocPath(lockData.registrationId)).data.memberRolls.hasAny([
+          lockData.rollNumber
+        ]);
+    }
+
+    function getLockDocId(eventId, rollNumber) {
+      return eventId + '_' + rollNumber;
+    }
+
+    function registrationsGloballyOpen() {
+      return !exists(/databases/$(database)/documents/system_settings/registration_control)
+        // Backward-compatible: if `enabled` is missing in older docs, keep registrations open.
+        || get(/databases/$(database)/documents/system_settings/registration_control).data.enabled != false;
+    }
+
+    function eventRegistrationsOpen(eventId) {
+      return exists(/databases/$(database)/documents/events/$(eventId))
+        // Backward-compatible: older event docs may not have `status`.
+        && (
+          get(/databases/$(database)/documents/events/$(eventId)).data.status == 'OPEN'
+          || get(/databases/$(database)/documents/events/$(eventId)).data.status == null
+        );
+    }
+
+    function hasAllowedRegistrationKeys() {
+      return request.resource.data.keys().hasOnly([
+        'eventId',
+        'eventName',
+        'teamName',
+        'alternatePhone',
+        'instagramLink',
+        'driveLink',
+        'ideaText',
+        'substituteName',
+        'members',
+        'memberRolls',
+        'timestamp',
+        'createdAt'
+      ]);
+    }
+
+    match /events/{eventId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /system_settings/{settingId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /admin_session_controls/{uid} {
+      allow read: if request.auth != null && request.auth.uid == uid;
+      allow write: if isAdmin();
+    }
+
+    match /registrations/{registrationId} {
+      allow create: if hasAllowedRegistrationKeys()
+        && registrationsGloballyOpen()
+        && isNonEmptyString(request.resource.data.eventId)
+        && isNonEmptyString(request.resource.data.eventName)
+        && eventRegistrationsOpen(request.resource.data.eventId)
+        && hasValidMembersAndRolls(
+          request.resource.data.members,
+          request.resource.data.memberRolls
+        )
+        // Require roll-lock participation in the same write request.
+        // This blocks legacy/direct writes that skip lock creation and could allow duplicates.
+        && primaryRollLockExistsAfter(
+          request.resource.data.eventId,
+          request.resource.data.memberRolls
+        )
+        && (
+          !request.resource.data.keys().hasAny(['instagramLink'])
+          || isNonEmptyString(request.resource.data.instagramLink)
+        )
+        && (
+          !request.resource.data.keys().hasAny(['driveLink'])
+          || isNonEmptyString(request.resource.data.driveLink)
+        )
+        && (
+          !request.resource.data.keys().hasAny(['ideaText'])
+          || (
+            isNonEmptyString(request.resource.data.ideaText)
+            && request.resource.data.ideaText.size() <= 500
+          )
+        )
+        && request.resource.data.timestamp is string
+        && request.resource.data.createdAt is number;
+
+      allow read, update, delete: if isAdmin();
+    }
+
+    match /registration_roll_locks/{lockId} {
+      // Public `get` is needed so anonymous registration transactions can
+      // check lock documents; `list` stays admin-only to avoid enumeration.
+      allow get: if true;
+      allow list: if isAdmin();
+
+      // Keep lock checks lightweight (no extra cross-document reads) for high concurrency.
+      allow create: if request.resource.data.keys().hasOnly([
+          'eventId',
+          'rollNumber',
+          'registrationId',
+          'createdAt'
+        ])
+        && isNonEmptyString(request.resource.data.eventId)
+        && isValidRollNumber(request.resource.data.rollNumber)
+        && isNonEmptyString(request.resource.data.registrationId)
+        && request.resource.data.createdAt is number
+        && lockId == getLockDocId(
+          request.resource.data.eventId,
+          request.resource.data.rollNumber
+        )
+        // Validate registrationId format (Firestore auto IDs are URL-safe chars).
+        && request.resource.data.registrationId.matches('^[A-Za-z0-9_-]{6,128}$')
+        // Lock must correspond to a registration being written in the same request.
+        && lockMatchesRegistrationWrite(request.resource.data);
+
+      allow update, delete: if isAdmin();
+    }
+  }
+}

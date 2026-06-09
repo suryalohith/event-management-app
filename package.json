@@ -1,0 +1,39 @@
+{
+  "name": "aurax-2026-|-andhra-university-cse",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "check:env": "node scripts/validate-env.mjs",
+    "deploy": "npm run check:env && npm run build && firebase deploy --only hosting",
+    "deploy:all": "npm run check:env && npm run build && firebase deploy",
+    "hosting:disable": "firebase hosting:disable --site aurax2026-au --force",
+    "admin:grant": "node scripts/grant-admin-claim.mjs",
+    "admin:check": "node scripts/check-admin-claim.mjs",
+    "admin:logout-all": "node scripts/revoke-admin-sessions.mjs",
+    "locks:audit": "node scripts/audit-roll-locks.mjs",
+    "events:sync": "node scripts/sync-technical-events.mjs",
+    "events:seed": "node scripts/seed-events.mjs",
+    "load:test": "node scripts/load-test-registrations.mjs"
+  },
+  "dependencies": {
+    "@firebase/app-check": "^0.11.0",
+    "firebase": "^11.10.0",
+    "firebase-admin": "^13.6.1",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4"
+  },
+  "devDependencies": {
+    "@types/node": "^22.14.0",
+    "@vitejs/plugin-react": "^5.0.0",
+    "autoprefixer": "^10.4.24",
+    "postcss": "^8.5.6",
+    "tailwindcss": "^3.4.19",
+    "typescript": "~5.8.2",
+    "vite": "^6.2.0",
+    "vite-plugin-compression": "^0.5.1"
+  }
+}
