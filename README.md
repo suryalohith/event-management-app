@@ -2,6 +2,27 @@
 
 # AURAX-2026 App
 
+# AURAX-2026 Event Registration Platform
+
+AURAX-2026 is a full-featured event registration and administration platform built for the Andhra University CSE department fest. Developed with React, Firebase, and Cloud Firestore, the application is designed to streamline participant registration, event management, and admin-side control for a large multi-category college event.
+
+The platform supports 36 events across technical, non-technical, sports, and esports categories. It handles both individual and team-based registrations, with support for team sizes ranging up to 15 participants depending on the event. The system is backed by Cloud Firestore for storing event and registration data, while Firebase Hosting is used for deployment and Firebase Authentication secures admin access.
+
+In addition to participant registration workflows, the project includes administrative utilities for managing event data, granting and validating admin access, syncing seeded events, auditing registration-related data, and running load tests for registration workflows. For development convenience, the app also supports a LocalStorage fallback when Firebase environment variables are not configured.
+
+## Features
+
+- Registration support for 36 fest events across multiple categories
+- Individual and team registration workflows
+- Team size support of up to 15 participants for selected events
+- Secure admin login using Firebase Authentication and custom claims
+- Firestore-backed storage for `events` and `registrations`
+- Firebase Hosting deployment support
+- Event seeding and synchronization scripts for setup and maintenance
+- Admin utility scripts for access control and session handling
+- Load-testing utilities for validating registration performance
+- LocalStorage fallback for local development without Firebase configuration
+
 This app is now wired for:
 - Firebase Hosting deployment
 - Cloud Firestore for `events` and `registrations`
